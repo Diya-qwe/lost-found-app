@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Choose - Lost or Found</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style1.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <h1 class="logo">🔍 Lost & Found System</h1>
+            <div class="nav-links">
+                <span id="userDisplay"></span>
+                <a href="{{ url_for('my_items1') }}" class="btn btn-outline">📦 My Items</a>
+                <a href="{{ url_for('my_messages1') }}" class="btn btn-outline" id="messagesBtn">💬 Messages <span id="unreadBadge" class="badge" style="display:none;"></span></a>
+                <a href="{{ url_for('logout1') }}" class="btn btn-outline">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="hero-section">
+            <h1>Welcome, <span id="username"></span>!</h1>
+            <p>What would you like to do today?</p>
+        </div>
+
+        <div class="choice-cards">
+            <div class="choice-card lost-card">
+                <div class="choice-icon">🔍</div>
+                <h2>Looking for Something?</h2>
+                <p>Browse through lost items or report something you've lost</p>
+                <div class="choice-buttons">
+                    <a href="{{ url_for('lost_items1') }}" class="btn btn-primary">View Lost Items</a>
+                    <a href="{{ url_for('report_lost1') }}" class="btn btn-outline-primary">Report Lost Item</a>
+                </div>
+            </div>
+
+            <div class="choice-card found-card">
+                <div class="choice-icon">🎯</div>
+                <h2>Found Something?</h2>
+                <p>Help return items to their owners</p>
+                <div class="choice-buttons">
+                    <a href="{{ url_for('found_items1') }}" class="btn btn-primary">View Found Items</a>
+                    <a href="{{ url_for('report_found1') }}" class="btn btn-outline-primary">Report Found Item</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function loadUser() {
+            const res = await fetch('/api/me');
+            const user = await res.json();
+            document.getElementById('username').innerText = user.username;
+            
+            if (user.unread_count > 0) {
+                const badge = document.getElementById('unreadBadge');
+                badge.innerText = user.unread_count;
+                badge.style.display = 'inline-block';
+            }
+        }
+        loadUser();
+        
+        // Refresh unread count every 30 seconds
+        setInterval(loadUser, 30000);
+    </script>
+</body>
+</html>

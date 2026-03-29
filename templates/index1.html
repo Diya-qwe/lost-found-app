@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lost & Found System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style1.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <h1 class="logo">🔍 Lost & Found</h1>
+            <div class="nav-links">
+                <span id="userDisplay"></span>
+                <a href="{{ url_for('login1') }}" id="loginLink" class="btn btn-outline">Login</a>
+                <a href="{{ url_for('register1') }}" id="registerLink" class="btn btn-outline">Register</a>
+                <a href="{{ url_for('logout1') }}" id="logoutLink" class="btn btn-outline" style="display:none">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="search-section">
+            <input type="text" id="searchInput" placeholder="Search by title or description...">
+            <select id="typeFilter">
+                <option value="">All Types</option>
+                <option value="lost">Lost</option>
+                <option value="found">Found</option>
+            </select>
+            <input type="text" id="locationFilter" placeholder="Location...">
+            <button id="searchBtn" class="btn btn-primary">Search</button>
+        </div>
+
+        <div class="create-btn-container">
+            <button id="createItemBtn" class="btn btn-success" style="display:none">+ Report Lost/Found</button>
+        </div>
+
+        <div id="itemsContainer" class="items-grid"></div>
+    </div>
+
+    <!-- Item Modal -->
+    <div id="itemModal" class="modal">
+        <div class="modal-content">
+            <h2>Report Item</h2>
+            <select id="itemType">
+                <option value="lost">Lost</option>
+                <option value="found">Found</option>
+            </select>
+            <input type="text" id="itemTitle" placeholder="Title">
+            <textarea id="itemDesc" rows="3" placeholder="Description"></textarea>
+            <input type="text" id="itemLocation" placeholder="Location">
+            <input type="date" id="itemDate">
+            <input type="file" id="itemImage" accept="image/*">
+            <button id="saveItemBtn" class="btn btn-primary">Submit</button>
+            <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Chat Modal -->
+    <div id="chatModal" class="modal">
+        <div class="modal-content">
+            <h2>Chat</h2>
+            <div id="chatMessages" class="chat-messages"></div>
+            <input type="text" id="chatInput" placeholder="Type your message...">
+            <button id="sendMsgBtn" class="btn btn-primary">Send</button>
+            <button class="btn btn-secondary" onclick="closeChatModal()">Close</button>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let currentChatOwner = null;
+        let currentChatItem = null;
+
+        async function api(url, options = {}) {
+            const res = await fetch(url, {
+                ...options,
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin'
+            });
+            if (!res.ok) throw new Error(await res.text());
+            return res.json();
+        }
+
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/me');
+                if (res.ok) {
+                    currentUser = await res.json();
+                    document.getElementById('userDisplay').innerHTML = `Welcome, ${currentUser.username}`;
+                    document.getElementById('loginLink').style.display = 'none';
+                    document.getElementById('registerLink').style.display = 'none';
+                    document.getElementById('logoutLink').style.display = 'inline-block';
+                    document.getElementById('createItemBtn').style.display = 'inline-block';
+                } else {
+                    currentUser = null;
+                    document.getElementById('userDisplay').innerHTML = '';
+                    document.getElementById('loginLink').style.display = 'inline-block';
+                    document.getElementById('registerLink').style.display = 'inline-block';
+                    document.getElementById('logoutLink').style.display = 'none';
+                    document.getElementById('createItemBtn').style.display = 'none';
+                }
+            } catch(e) {
+                currentUser = null;
+            }
+            loadItems();
+        }
+
+        async function loadItems() {
+            const search = document.getElementById('searchInput').value;
+            const type = document.getElementById('typeFilter').value;
+            const location = document.getElementById('locationFilter').value;
+            let url = '/api/items?';
+            if (search) url += `search=${encodeURIComponent(search)}&`;
+            if (type) url += `type=${type}&`;
+            if (location) url += `location=${encodeURIComponent(location)}&`;
+            
+            const items = await api(url);
+            const container = document.getElementById('itemsContainer');
+            container.innerHTML = items.map(item => `
+                <div class="item-card">
+                    ${item.image_path ? `<img src="/${item.image_path}" alt="Item">` : '<div class="no-image">No Image</div>'}
+                    <h3>${item.title}</h3>
+                    <p><strong>${item.type.toUpperCase()}</strong> - ${item.location}</p>
+                    <p>${item.description.substring(0, 100)}...</p>
+                    <p><small>Reported by ${item.owner_name}</small></p>
+                    ${currentUser ? `<button class="btn btn-primary" onclick="openChat(${item.owner_id}, ${item.id})">Contact Owner</button>` : ''}
+                    ${currentUser && (currentUser.id === item.owner_id || currentUser.role === 'admin') ? `<button class="btn btn-danger" onclick="deleteItem(${item.id})">Delete</button>` : ''}
+                    ${currentUser && currentUser.role !== 'admin' && currentUser.id !== item.owner_id ? `<button class="btn btn-warning" onclick="reportItem(${item.id})">Report</button>` : ''}
+                </div>
+            `).join('');
+        }
+
+        async function createItem() {
+            const formData = new FormData();
+            formData.append('type', document.getElementById('itemType').value);
+            formData.append('title', document.getElementById('itemTitle').value);
+            formData.append('description', document.getElementById('itemDesc').value);
+            formData.append('location', document.getElementById('itemLocation').value);
+            formData.append('date_occurred', document.getElementById('itemDate').value);
+            const file = document.getElementById('itemImage').files[0];
+            if (file) formData.append('image', file);
+            
+            const res = await fetch('/api/items', { method: 'POST', body: formData });
+            if (res.ok) {
+                closeModal();
+                loadItems();
+                alert('Item reported successfully!');
+            }
+        }
+
+        async function deleteItem(id) {
+            if (confirm('Delete this item?')) {
+                await api(`/api/items/${id}`, { method: 'DELETE' });
+                loadItems();
+            }
+        }
+
+        async function reportItem(id) {
+            await api(`/api/items/${id}/report`, { method: 'POST' });
+            alert('Item reported to admin');
+        }
+
+        async function openChat(ownerId, itemId) {
+            currentChatOwner = ownerId;
+            currentChatItem = itemId;
+            await loadMessages();
+            document.getElementById('chatModal').style.display = 'flex';
+        }
+
+        async function loadMessages() {
+            const messages = await api(`/api/messages?other_user=${currentChatOwner}&item_id=${currentChatItem}`);
+            const container = document.getElementById('chatMessages');
+            container.innerHTML = messages.map(msg => `
+                <div class="message ${msg.sender_id === currentUser.id ? 'sent' : 'received'}">
+                    <strong>${msg.sender_name}:</strong> ${msg.content}<br>
+                    <small>${new Date(msg.created_at).toLocaleString()}</small>
+                </div>
+            `).join('');
+        }
+
+        async function sendMessage() {
+            const content = document.getElementById('chatInput').value;
+            if (!content.trim()) return;
+            await api('/api/messages', {
+                method: 'POST',
+                body: JSON.stringify({
+                    receiver_id: currentChatOwner,
+                    item_id: currentChatItem,
+                    content: content
+                })
+            });
+            document.getElementById('chatInput').value = '';
+            loadMessages();
+        }
+
+        function closeModal() {
+            document.getElementById('itemModal').style.display = 'none';
+        }
+
+        function closeChatModal() {
+            document.getElementById('chatModal').style.display = 'none';
+        }
+
+        document.getElementById('searchBtn').addEventListener('click', loadItems);
+        document.getElementById('createItemBtn').addEventListener('click', () => {
+            document.getElementById('itemModal').style.display = 'flex';
+        });
+        document.getElementById('saveItemBtn').addEventListener('click', createItem);
+        document.getElementById('sendMsgBtn').addEventListener('click', sendMessage);
+        
+        checkAuth();
+    </script>
+</body>
+</html>

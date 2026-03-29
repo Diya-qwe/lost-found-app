@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lost & Found - Welcome</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style1.css') }}">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <h1>🔍 Lost & Found System</h1>
+            <p style="text-align: center; margin: 20px 0;">Help return lost items to their owners!</p>
+            <div style="display: flex; gap: 15px; justify-content: center;">
+                <a href="{{ url_for('login1') }}" class="btn btn-primary">Login</a>
+                <a href="{{ url_for('register1') }}" class="btn btn-success">Register</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

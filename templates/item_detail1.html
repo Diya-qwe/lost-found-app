@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Item Details</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style1.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <h1 class="logo">🔍 Lost & Found - Item Details</h1>
+            <div class="nav-links">
+                <a href="javascript:history.back()" class="btn btn-outline">← Back</a>
+                <a href="{{ url_for('my_messages1') }}" class="btn btn-outline">💬 Messages</a>
+                <a href="{{ url_for('logout1') }}" class="btn btn-outline">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div id="itemDetail" class="detail-container"></div>
+        
+        <div class="chat-section" id="chatSection" style="display:none;">
+            <h3>💬 Conversation</h3>
+            <div id="chatMessages" class="chat-messages"></div>
+            <div class="chat-input-group">
+                <input type="text" id="chatInput" placeholder="Type your message...">
+                <button id="sendBtn" class="btn btn-primary">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const itemId = {{ item_id }};
+        let currentUser = null;
+        let itemOwnerId = null;
+
+        async function api(url, options = {}) {
+            const res = await fetch(url, {
+                ...options,
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin'
+            });
+            if (!res.ok) throw new Error(await res.text());
+            return res.json();
+        }
+
+        async function loadUser() {
+            const res = await fetch('/api/me');
+            currentUser = await res.json();
+        }
+
+        async function loadItem() {
+            const item = await api(`/api/items/${itemId}`);
+            itemOwnerId = item.owner_id;
+            
+            const container = document.getElementById('itemDetail');
+            container.innerHTML = `
+                <div class="detail-card">
+                    ${item.image_path ? `<img src="/${item.image_path}" class="detail-image" style="width:100%; height:400px; object-fit:cover;">` : '<div class="detail-no-image">📷 No Image Available</div>'}
+                    <div class="detail-info">
+                        <h1>${item.title}</h1>
+                        <p class="item-type ${item.type}">${item.type.toUpperCase()}</p>
+                        <p><strong>📍 Location:</strong> ${item.location}</p>
+                        <p><strong>📅 Date:</strong> ${item.date}</p>
+                        <p><strong>📝 Description:</strong></p>
+                        <p>${item.description}</p>
+                        <p><small>Reported by ${item.owner_name} on ${new Date(item.created_at).toLocaleDateString()}</small></p>
+                        ${currentUser.id !== item.owner_id ? `<button id="contactBtn" class="btn btn-primary">💬 Contact Owner</button>` : '<p class="owner-note">📌 This is your item. People can message you about it.</p>'}
+                        ${currentUser.role === 'admin' ? `<button id="deleteBtn" class="btn btn-danger">🗑️ Delete Item</button>` : ''}
+                    </div>
+                </div>
+            `;
+            
+            const contactBtn = document.getElementById('contactBtn');
+            if (contactBtn) {
+                contactBtn.addEventListener('click', () => {
+                    document.getElementById('chatSection').style.display = 'block';
+                    loadMessages();
+                });
+            }
+            
+            const deleteBtn = document.getElementById('deleteBtn');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', async () => {
+                    if (confirm('Delete this item?')) {
+                        await api(`/api/items/${itemId}`, { method: 'DELETE' });
+                        alert('Item deleted');
+                        window.location.href = '/choose1';
+                    }
+                });
+            }
+            
+            // Auto-open chat if user is the owner (so they can see messages)
+            if (currentUser.id === itemOwnerId) {
+                document.getElementById('chatSection').style.display = 'block';
+                loadMessages();
+            }
+        }
+
+        async function loadMessages() {
+            const messages = await api(`/api/messages?other_user=${itemOwnerId}&item_id=${itemId}`);
+            const container = document.getElementById('chatMessages');
+            if (messages.length === 0) {
+                container.innerHTML = '<p class="no-messages">No messages yet. Start the conversation!</p>';
+                return;
+            }
+            container.innerHTML = messages.map(msg => `
+                <div class="message ${msg.sender_id === currentUser.id ? 'sent' : 'received'}">
+                    <strong>${msg.sender_name}:</strong><br>
+                    ${msg.content}<br>
+                    <small>${new Date(msg.created_at).toLocaleString()}</small>
+                    ${!msg.is_read && msg.sender_id !== currentUser.id ? '<span style="font-size:10px; margin-left:10px;">📖 New</span>' : ''}
+                </div>
+            `).join('');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const content = document.getElementById('chatInput').value;
+            if (!content.trim()) return;
+            
+            await api('/api/messages', {
+                method: 'POST',
+                body: JSON.stringify({
+                    receiver_id: itemOwnerId,
+                    item_id: itemId,
+                    content: content
+                })
+            });
+            document.getElementById('chatInput').value = '';
+            loadMessages();
+        }
+
+        document.getElementById('sendBtn')?.addEventListener('click', sendMessage);
+        document.getElementById('chatInput')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+        
+        loadUser();
+        loadItem();
+    </script>
+</body>
+</html>

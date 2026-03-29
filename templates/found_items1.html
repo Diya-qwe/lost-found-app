@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Found Items</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style1.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <h1 class="logo">🔍 Lost & Found - Found Items</h1>
+            <div class="nav-links">
+                <a href="{{ url_for('choose1') }}" class="btn btn-outline">← Back</a>
+                <a href="{{ url_for('logout1') }}" class="btn btn-outline">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>🎯 Found Items</h1>
+            <p>Items found by kind community members</p>
+        </div>
+
+        <div class="search-section">
+            <input type="text" id="searchInput" placeholder="Search by title or description...">
+            <input type="text" id="locationFilter" placeholder="Filter by location...">
+            <button id="searchBtn" class="btn btn-primary">Search</button>
+            <a href="{{ url_for('report_found1') }}" class="btn btn-success">+ Report Found Item</a>
+        </div>
+
+        <div id="itemsContainer" class="items-grid"></div>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        async function api(url, options = {}) {
+            const res = await fetch(url, {
+                ...options,
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin'
+            });
+            if (!res.ok) throw new Error(await res.text());
+            return res.json();
+        }
+
+        async function loadUser() {
+            const res = await fetch('/api/me');
+            currentUser = await res.json();
+        }
+
+        async function loadItems() {
+            const search = document.getElementById('searchInput').value;
+            const location = document.getElementById('locationFilter').value;
+            let url = '/api/items?type=found';
+            if (search) url += `&search=${encodeURIComponent(search)}`;
+            if (location) url += `&location=${encodeURIComponent(location)}`;
+            
+            const items = await api(url);
+            const container = document.getElementById('itemsContainer');
+            if (items.length === 0) {
+                container.innerHTML = '<div class="no-items">No found items yet. <a href="{{ url_for('report_found1') }}">Report one now?</a></div>';
+                return;
+            }
+            container.innerHTML = items.map(item => `
+                <div class="item-card">
+                    ${item.image_path ? `<img src="/${item.image_path}" alt="Item" style="width:100%; height:200px; object-fit:cover;">` : '<div class="no-image">📷 No Image</div>'}
+                    <h3>${item.title}</h3>
+                    <p><strong>📍 Location:</strong> ${item.location}</p>
+                    <p>${item.description.substring(0, 100)}...</p>
+                    <p><small>Reported by ${item.owner_name}</small></p>
+                    <a href="/item_detail1/${item.id}" class="btn btn-primary">View Details</a>
+                </div>
+            `).join('');
+        }
+
+        document.getElementById('searchBtn').addEventListener('click', loadItems);
+        loadUser();
+        loadItems();
+    </script>
+</body>
+</html>

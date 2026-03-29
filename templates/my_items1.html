@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Items</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style1.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <h1 class="logo">🔍 Lost & Found - My Items</h1>
+            <div class="nav-links">
+                <a href="{{ url_for('choose1') }}" class="btn btn-outline">← Back</a>
+                <a href="{{ url_for('my_messages1') }}" class="btn btn-outline">💬 Messages</a>
+                <a href="{{ url_for('logout1') }}" class="btn btn-outline">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>📦 My Reported Items</h1>
+            <p>Items you have reported as lost or found</p>
+        </div>
+
+        <div id="itemsContainer" class="items-grid"></div>
+    </div>
+
+    <script>
+        async function api(url, options = {}) {
+            const res = await fetch(url, {
+                ...options,
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin'
+            });
+            if (!res.ok) throw new Error(await res.text());
+            return res.json();
+        }
+
+        async function loadItems() {
+            const items = await api('/api/my_items');
+            const container = document.getElementById('itemsContainer');
+            
+            if (items.length === 0) {
+                container.innerHTML = '<div class="no-items">You haven\'t reported any items yet. <a href="{{ url_for('choose1') }}">Report one now?</a></div>';
+                return;
+            }
+            
+            container.innerHTML = items.map(item => `
+                <div class="item-card">
+                    ${item.image_path ? `<img src="/${item.image_path}" alt="Item" style="width:100%; height:200px; object-fit:cover;">` : '<div class="no-image">📷 No Image</div>'}
+                    <h3>${item.title}</h3>
+                    <p><strong>📍 Location:</strong> ${item.location}</p>
+                    <p><strong>📅 Date:</strong> ${item.date}</p>
+                    <p><span class="item-type ${item.type}">${item.type.toUpperCase()}</span></p>
+                    <p>${item.description.substring(0, 100)}...</p>
+                    <p><small>Reported on ${new Date(item.created_at).toLocaleDateString()}</small></p>
+                    ${item.message_count > 0 ? `<p class="message-count">💬 ${item.message_count} message(s)</p>` : ''}
+                    <a href="/item_detail1/${item.id}" class="btn btn-primary">View Details</a>
+                </div>
+            `).join('');
+        }
+
+        loadItems();
+    </script>
+</body>
+</html>

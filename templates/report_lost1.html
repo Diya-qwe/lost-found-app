@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Lost Item</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style1.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <h1 class="logo">🔍 Lost & Found - Report Lost</h1>
+            <div class="nav-links">
+                <a href="{{ url_for('choose1') }}" class="btn btn-outline">← Back</a>
+                <a href="{{ url_for('logout1') }}" class="btn btn-outline">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="form-container">
+            <h1>📝 Report Lost Item</h1>
+            <p>Help others find what you've lost</p>
+
+            <form id="reportForm">
+                <div class="form-group">
+                    <label>Title *</label>
+                    <input type="text" id="title" placeholder="e.g., Black Leather Wallet" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Description *</label>
+                    <textarea id="description" rows="5" placeholder="Describe the item in detail (color, brand, distinguishing features...)" required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Location where lost *</label>
+                    <input type="text" id="location" placeholder="e.g., Central Park, Main Street Coffee Shop" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Date lost *</label>
+                    <input type="date" id="date" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Upload Image (optional)</label>
+                    <input type="file" id="image" accept="image/*">
+                    <small>Upload a photo to help identify your item</small>
+                </div>
+
+                <div class="form-buttons">
+                    <button type="submit" class="btn btn-primary">Submit Report</button>
+                    <a href="{{ url_for('choose1') }}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('reportForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('type', 'lost');
+            formData.append('title', document.getElementById('title').value);
+            formData.append('description', document.getElementById('description').value);
+            formData.append('location', document.getElementById('location').value);
+            formData.append('date_occurred', document.getElementById('date').value);
+            
+            const file = document.getElementById('image').files[0];
+            if (file) formData.append('image', file);
+            
+            const res = await fetch('/api/items', { method: 'POST', body: formData });
+            if (res.ok) {
+                alert('Lost item reported successfully!');
+                window.location.href = '/lost_items1';
+            } else {
+                alert('Error reporting item');
+            }
+        });
+
+        document.getElementById('date').valueAsDate = new Date();
+    </script>
+</body>
+</html>
