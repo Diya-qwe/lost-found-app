@@ -21,7 +21,8 @@
     <div class="container">
         <div id="itemDetail" class="detail-container"></div>
         
-        <div class="chat-section" id="chatSection" style="display:none;">
+        <!-- Chat section always visible for both owner and non-owner -->
+        <div class="chat-section" id="chatSection">
             <h3>💬 Conversation</h3>
             <div id="chatMessages" class="chat-messages"></div>
             <div class="chat-input-group">
@@ -35,6 +36,7 @@
         const itemId = {{ item_id }};
         let currentUser = null;
         let itemOwnerId = null;
+        let itemTitle = "";
 
         async function api(url, options = {}) {
             const res = await fetch(url, {
@@ -54,6 +56,7 @@
         async function loadItem() {
             const item = await api(`/api/items/${itemId}`);
             itemOwnerId = item.owner_id;
+            itemTitle = item.title;
             
             const container = document.getElementById('itemDetail');
             container.innerHTML = `
@@ -67,19 +70,10 @@
                         <p><strong>📝 Description:</strong></p>
                         <p>${item.description}</p>
                         <p><small>Reported by ${item.owner_name} on ${new Date(item.created_at).toLocaleDateString()}</small></p>
-                        ${currentUser.id !== item.owner_id ? `<button id="contactBtn" class="btn btn-primary">💬 Contact Owner</button>` : '<p class="owner-note">📌 This is your item. People can message you about it.</p>'}
                         ${currentUser.role === 'admin' ? `<button id="deleteBtn" class="btn btn-danger">🗑️ Delete Item</button>` : ''}
                     </div>
                 </div>
             `;
-            
-            const contactBtn = document.getElementById('contactBtn');
-            if (contactBtn) {
-                contactBtn.addEventListener('click', () => {
-                    document.getElementById('chatSection').style.display = 'block';
-                    loadMessages();
-                });
-            }
             
             const deleteBtn = document.getElementById('deleteBtn');
             if (deleteBtn) {
@@ -92,11 +86,8 @@
                 });
             }
             
-            // Auto-open chat if user is the owner (so they can see messages)
-            if (currentUser.id === itemOwnerId) {
-                document.getElementById('chatSection').style.display = 'block';
-                loadMessages();
-            }
+            // Load messages for this item
+            await loadMessages();
         }
 
         async function loadMessages() {
@@ -130,7 +121,16 @@
                 })
             });
             document.getElementById('chatInput').value = '';
-            loadMessages();
+            await loadMessages();
+            
+            // Refresh unread count in navbar
+            const userRes = await fetch('/api/me');
+            const user = await userRes.json();
+            const badge = document.getElementById('unreadBadge');
+            if (badge && user.unread_count > 0) {
+                badge.innerText = user.unread_count;
+                badge.style.display = 'inline-block';
+            }
         }
 
         document.getElementById('sendBtn')?.addEventListener('click', sendMessage);
