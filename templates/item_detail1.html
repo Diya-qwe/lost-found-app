@@ -12,6 +12,7 @@
             <h1 class="logo">🔍 Lost & Found - Item Details</h1>
             <div class="nav-links">
                 <a href="javascript:history.back()" class="btn btn-outline">← Back</a>
+                <a href="{{ url_for('my_messages1') }}" class="btn btn-outline">💬 Messages</a>
                 <a href="{{ url_for('logout1') }}" class="btn btn-outline">Logout</a>
             </div>
         </div>
@@ -21,7 +22,7 @@
         <div id="itemDetail" class="detail-container"></div>
         
         <div class="chat-section" id="chatSection" style="display:none;">
-            <h3>💬 Contact Owner</h3>
+            <h3>💬 Conversation</h3>
             <div id="chatMessages" class="chat-messages"></div>
             <div class="chat-input-group">
                 <input type="text" id="chatInput" placeholder="Type your message...">
@@ -66,7 +67,7 @@
                         <p><strong>📝 Description:</strong></p>
                         <p>${item.description}</p>
                         <p><small>Reported by ${item.owner_name} on ${new Date(item.created_at).toLocaleDateString()}</small></p>
-                        ${currentUser.id !== item.owner_id ? `<button id="contactBtn" class="btn btn-primary">💬 Contact Owner</button>` : '<p class="owner-note">This is your item</p>'}
+                        ${currentUser.id !== item.owner_id ? `<button id="contactBtn" class="btn btn-primary">💬 Contact Owner</button>` : '<p class="owner-note">📌 This is your item. People can message you about it.</p>'}
                         ${currentUser.role === 'admin' ? `<button id="deleteBtn" class="btn btn-danger">🗑️ Delete Item</button>` : ''}
                     </div>
                 </div>
@@ -90,6 +91,12 @@
                     }
                 });
             }
+            
+            // Auto-open chat if user is the owner (so they can see messages)
+            if (currentUser.id === itemOwnerId) {
+                document.getElementById('chatSection').style.display = 'block';
+                loadMessages();
+            }
         }
 
         async function loadMessages() {
@@ -104,6 +111,7 @@
                     <strong>${msg.sender_name}:</strong><br>
                     ${msg.content}<br>
                     <small>${new Date(msg.created_at).toLocaleString()}</small>
+                    ${!msg.is_read && msg.sender_id !== currentUser.id ? '<span style="font-size:10px; margin-left:10px;">📖 New</span>' : ''}
                 </div>
             `).join('');
             container.scrollTop = container.scrollHeight;
