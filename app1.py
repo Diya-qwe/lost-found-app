@@ -4,6 +4,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from database1 import db, User, Item, Message
 import os
+@app.route("/ping")
+def ping():
+    return "OK"
 from datetime import datetime
 
 app = Flask(__name__)
