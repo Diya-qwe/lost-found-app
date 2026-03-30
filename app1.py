@@ -3,10 +3,16 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from database1 import db, User, Item, Message
+from flask import Flask
 import os
+
+app = Flask(__name__)
+
 @app.route("/ping")
 def ping():
     return "OK"
+
+# rest of your routes...
 from datetime import datetime
 
 app = Flask(__name__)
