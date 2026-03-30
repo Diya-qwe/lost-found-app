@@ -12,6 +12,7 @@
             <h1 class="logo">🔍 Lost & Found - Item Details</h1>
             <div class="nav-links">
                 <a href="javascript:history.back()" class="btn btn-outline">← Back</a>
+                <a href="{{ url_for('my_messages1') }}" class="btn btn-outline">💬 Messages</a>
                 <a href="{{ url_for('logout1') }}" class="btn btn-outline">Logout</a>
             </div>
         </div>
@@ -20,8 +21,8 @@
     <div class="container">
         <div id="itemDetail" class="detail-container"></div>
         
-        <div class="chat-section" id="chatSection" style="display:none;">
-            <h3>💬 Contact Owner</h3>
+        <div class="chat-section">
+            <h3>💬 Conversation</h3>
             <div id="chatMessages" class="chat-messages"></div>
             <div class="chat-input-group">
                 <input type="text" id="chatInput" placeholder="Type your message...">
@@ -51,13 +52,25 @@
         }
 
         async function loadItem() {
-            const item = await api(`/api/items/${itemId}`);
+            const item = await api('/api/items/' + itemId);
             itemOwnerId = item.owner_id;
             
             const container = document.getElementById('itemDetail');
+            let imageHtml = '';
+            if (item.image_path) {
+                imageHtml = '<img src="/' + item.image_path + '" class="detail-image" style="width:100%; height:400px; object-fit:cover;">';
+            } else {
+                imageHtml = '<div class="detail-no-image">📷 No Image Available</div>';
+            }
+            
+            let deleteButton = '';
+            if (currentUser.role === 'admin') {
+                deleteButton = '<button id="deleteBtn" class="btn btn-danger">🗑️ Delete Item</button>';
+            }
+            
             container.innerHTML = `
                 <div class="detail-card">
-                    ${item.image_path ? `<img src="/${item.image_path}" class="detail-image" style="width:100%; height:400px; object-fit:cover;">` : '<div class="detail-no-image">📷 No Image Available</div>'}
+                    ${imageHtml}
                     <div class="detail-info">
                         <h1>${item.title}</h1>
                         <p class="item-type ${item.type}">${item.type.toUpperCase()}</p>
@@ -66,46 +79,48 @@
                         <p><strong>📝 Description:</strong></p>
                         <p>${item.description}</p>
                         <p><small>Reported by ${item.owner_name} on ${new Date(item.created_at).toLocaleDateString()}</small></p>
-                        ${currentUser.id !== item.owner_id ? `<button id="contactBtn" class="btn btn-primary">💬 Contact Owner</button>` : '<p class="owner-note">This is your item</p>'}
-                        ${currentUser.role === 'admin' ? `<button id="deleteBtn" class="btn btn-danger">🗑️ Delete Item</button>` : ''}
+                        ${deleteButton}
                     </div>
                 </div>
             `;
             
-            const contactBtn = document.getElementById('contactBtn');
-            if (contactBtn) {
-                contactBtn.addEventListener('click', () => {
-                    document.getElementById('chatSection').style.display = 'block';
-                    loadMessages();
-                });
-            }
-            
             const deleteBtn = document.getElementById('deleteBtn');
             if (deleteBtn) {
-                deleteBtn.addEventListener('click', async () => {
+                deleteBtn.addEventListener('click', async function() {
                     if (confirm('Delete this item?')) {
-                        await api(`/api/items/${itemId}`, { method: 'DELETE' });
+                        await api('/api/items/' + itemId, { method: 'DELETE' });
                         alert('Item deleted');
                         window.location.href = '/choose1';
                     }
                 });
             }
+            
+            await loadMessages();
         }
 
         async function loadMessages() {
-            const messages = await api(`/api/messages?other_user=${itemOwnerId}&item_id=${itemId}`);
+            const messages = await api('/api/messages?other_user=' + itemOwnerId + '&item_id=' + itemId);
             const container = document.getElementById('chatMessages');
             if (messages.length === 0) {
                 container.innerHTML = '<p class="no-messages">No messages yet. Start the conversation!</p>';
                 return;
             }
-            container.innerHTML = messages.map(msg => `
-                <div class="message ${msg.sender_id === currentUser.id ? 'sent' : 'received'}">
-                    <strong>${msg.sender_name}:</strong><br>
-                    ${msg.content}<br>
-                    <small>${new Date(msg.created_at).toLocaleString()}</small>
-                </div>
-            `).join('');
+            
+            let html = '';
+            for (let i = 0; i < messages.length; i++) {
+                const msg = messages[i];
+                const messageClass = msg.sender_id === currentUser.id ? 'sent' : 'received';
+                const newBadge = (!msg.is_read && msg.sender_id !== currentUser.id) ? '<span style="font-size:10px; margin-left:10px;">📖 New</span>' : '';
+                html = html + `
+                    <div class="message ${messageClass}">
+                        <strong>${msg.sender_name}:</strong><br>
+                        ${msg.content}<br>
+                        <small>${new Date(msg.created_at).toLocaleString()}</small>
+                        ${newBadge}
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
             container.scrollTop = container.scrollHeight;
         }
 
@@ -122,13 +137,20 @@
                 })
             });
             document.getElementById('chatInput').value = '';
-            loadMessages();
+            await loadMessages();
         }
 
-        document.getElementById('sendBtn')?.addEventListener('click', sendMessage);
-        document.getElementById('chatInput')?.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage();
-        });
+        const sendBtn = document.getElementById('sendBtn');
+        const chatInput = document.getElementById('chatInput');
+        
+        if (sendBtn) {
+            sendBtn.addEventListener('click', sendMessage);
+        }
+        if (chatInput) {
+            chatInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') sendMessage();
+            });
+        }
         
         loadUser();
         loadItem();
