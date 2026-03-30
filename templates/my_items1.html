@@ -43,28 +43,23 @@
             const container = document.getElementById('itemsContainer');
             
             if (items.length === 0) {
-                container.innerHTML = '<div class="no-items">You haven\'t reported any items yet. <a href="/choose1">Report one now?</a></div>';
+                container.innerHTML = '<div class="no-items">You haven\'t reported any items yet. <a href="{{ url_for('choose1') }}">Report one now?</a></div>';
                 return;
             }
             
-            let html = '';
-            for (let i = 0; i < items.length; i++) {
-                const item = items[i];
-                html = html + `
-                    <div class="item-card">
-                        ${item.image_path ? '<img src="/' + item.image_path + '" alt="Item" style="width:100%; height:200px; object-fit:cover;">' : '<div class="no-image">📷 No Image</div>'}
-                        <h3>' + item.title + '</h3>
-                        <p><strong>📍 Location:</strong> ' + item.location + '</p>
-                        <p><strong>📅 Date:</strong> ' + item.date + '</p>
-                        <p><span class="item-type ' + item.type + '">' + item.type.toUpperCase() + '</span></p>
-                        <p>' + item.description.substring(0, 100) + '...</p>
-                        <p><small>Reported on ' + new Date(item.created_at).toLocaleDateString() + '</small></p>
-                        ' + (item.message_count > 0 ? '<p class="message-count">💬 ' + item.message_count + ' message(s)</p>' : '') + '
-                        <a href="/item_detail1/' + item.id + '" class="btn btn-primary">View & Reply to Messages</a>
-                    </div>
-                `;
-            }
-            container.innerHTML = html;
+            container.innerHTML = items.map(item => `
+                <div class="item-card">
+                    ${item.image_path ? `<img src="/${item.image_path}" alt="Item" style="width:100%; height:200px; object-fit:cover;">` : '<div class="no-image">📷 No Image</div>'}
+                    <h3>${item.title}</h3>
+                    <p><strong>📍 Location:</strong> ${item.location}</p>
+                    <p><strong>📅 Date:</strong> ${item.date}</p>
+                    <p><span class="item-type ${item.type}">${item.type.toUpperCase()}</span></p>
+                    <p>${item.description.substring(0, 100)}...</p>
+                    <p><small>Reported on ${new Date(item.created_at).toLocaleDateString()}</small></p>
+                    ${item.message_count > 0 ? `<p class="message-count">💬 ${item.message_count} message(s)</p>` : ''}
+                    <a href="/item_detail1/${item.id}" class="btn btn-primary">View Details</a>
+                </div>
+            `).join('');
         }
 
         loadItems();
