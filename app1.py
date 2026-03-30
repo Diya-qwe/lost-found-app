@@ -15,7 +15,7 @@ def ping():
 # rest of your routes...
 from datetime import datetime
 
-app = Flask(__name__)
+
 
 # ========== DATABASE CONFIGURATION (WORKS BOTH LOCALLY & ON RENDER) ==========
 # Use PostgreSQL on Render (if DATABASE_URL exists), otherwise use SQLite locally
