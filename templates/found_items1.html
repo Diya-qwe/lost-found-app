@@ -55,25 +55,31 @@
             const search = document.getElementById('searchInput').value;
             const location = document.getElementById('locationFilter').value;
             let url = '/api/items?type=found';
-            if (search) url += `&search=${encodeURIComponent(search)}`;
-            if (location) url += `&location=${encodeURIComponent(location)}`;
+            if (search) url = url + '&search=' + encodeURIComponent(search);
+            if (location) url = url + '&location=' + encodeURIComponent(location);
             
             const items = await api(url);
             const container = document.getElementById('itemsContainer');
             if (items.length === 0) {
-                container.innerHTML = '<div class="no-items">No found items yet. <a href="{{ url_for('report_found1') }}">Report one now?</a></div>';
+                container.innerHTML = '<div class="no-items">No found items yet. <a href="/report_found1">Report one now?</a></div>';
                 return;
             }
-            container.innerHTML = items.map(item => `
-                <div class="item-card">
-                    ${item.image_path ? `<img src="/${item.image_path}" alt="Item" style="width:100%; height:200px; object-fit:cover;">` : '<div class="no-image">📷 No Image</div>'}
-                    <h3>${item.title}</h3>
-                    <p><strong>📍 Location:</strong> ${item.location}</p>
-                    <p>${item.description.substring(0, 100)}...</p>
-                    <p><small>Reported by ${item.owner_name}</small></p>
-                    <a href="/item_detail1/${item.id}" class="btn btn-primary">View Details</a>
-                </div>
-            `).join('');
+            
+            let html = '';
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                html = html + `
+                    <div class="item-card">
+                        ${item.image_path ? '<img src="/' + item.image_path + '" alt="Item" style="width:100%; height:200px; object-fit:cover;">' : '<div class="no-image">📷 No Image</div>'}
+                        <h3>' + item.title + '</h3>
+                        <p><strong>📍 Location:</strong> ' + item.location + '</p>
+                        <p>' + item.description.substring(0, 100) + '...</p>
+                        <p><small>Reported by ' + item.owner_name + '</small></p>
+                        <a href="/item_detail1/' + item.id + '" class="btn btn-primary">View & Message</a>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
         }
 
         document.getElementById('searchBtn').addEventListener('click', loadItems);
